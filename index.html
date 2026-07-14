@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>deploy-gen — Server Deployment Configuration Generator</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #0B0F14;
+    --surface: #11161D;
+    --surface-2: #161C25;
+    --border: #232B36;
+    --border-soft: #1B222C;
+    --text: #D7DEE7;
+    --text-dim: #7C8AA0;
+    --text-faint: #4E5A6C;
+    --accent: #3FD67A;
+    --accent-dim: #1F5A3B;
+    --accent-glow: rgba(63,214,122,0.15);
+    --warn: #E3B341;
+    --link: #58A6FF;
+  }
+  *{ box-sizing: border-box; }
+  body{
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', system-ui, sans-serif;
+    background-image:
+      radial-gradient(circle at 15% 0%, rgba(63,214,122,0.06), transparent 40%),
+      repeating-linear-gradient(0deg, rgba(255,255,255,0.012) 0px, rgba(255,255,255,0.012) 1px, transparent 1px, transparent 3px);
+  }
+  .mono{ font-family: 'JetBrains Mono', monospace; }
+  .card{
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+  }
+  .field-input{
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 7px;
+    padding: 9px 12px;
+    font-size: 13.5px;
+    width: 100%;
+    transition: border-color .15s ease, box-shadow .15s ease;
+  }
+  .field-input:focus{
+    outline: none;
+    border-color: var(--accent-dim);
+    box-shadow: 0 0 0 3px var(--accent-glow);
+  }
+  .field-input.invalid{
+    border-color: #E5484D;
+    box-shadow: 0 0 0 3px rgba(229,72,77,0.12);
+  }
+  .field-label{
+    font-size: 11px;
+    letter-spacing: .04em;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    font-weight: 600;
+    margin-bottom: 6px;
+    display: block;
+  }
+  .field-hint{
+    font-size: 11px;
+    color: var(--text-faint);
+    margin-top: 4px;
+  }
+  .section-eyebrow{
+    font-size: 11px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--accent);
+    font-weight: 700;
+  }
+  .status-dot{
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--text-faint);
+    transition: background .2s ease, box-shadow .2s ease;
+    flex-shrink: 0;
+  }
+  .status-dot.active{
+    background: var(--accent);
+    box-shadow: 0 0 8px var(--accent);
+  }
+  .status-dot.warn{
+    background: var(--warn);
+    box-shadow: 0 0 8px var(--warn);
+  }
+  .term-window{
+    background: #0A0D12;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .term-bar{
+    background: var(--surface-2);
+    border-bottom: 1px solid var(--border);
+    padding: 8px 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .term-dot{ width: 10px; height: 10px; border-radius: 50%; }
+  pre.code-block{
+    margin: 0;
+    padding: 16px 18px;
+    font-size: 12.5px;
+    line-height: 1.65;
+    overflow-x: auto;
+    color: #B8C4D3;
+    white-space: pre;
+  }
+  .tok-cmd{ color: #7EE787; }
+  .tok-key{ color: #79C0FF; }
+  .tok-str{ color: #FFA657; }
+  .tok-comment{ color: #6E7681; font-style: italic; }
+  .tok-var{ color: #D2A8FF; }
+  .copy-btn{
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .02em;
+    padding: 5px 11px;
+    border-radius: 6px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    transition: all .15s ease;
+  }
+  .copy-btn:hover{
+    border-color: var(--accent-dim);
+    color: var(--accent);
+  }
+  .copy-btn.copied{
+    background: var(--accent-glow);
+    border-color: var(--accent-dim);
+    color: var(--accent);
+  }
+  .btn-primary{
+    background: var(--accent);
+    color: #06170D;
+    font-weight: 700;
+    border-radius: 8px;
+    transition: all .15s ease;
+    box-shadow: 0 0 0 0 var(--accent-glow);
+  }
+  .btn-primary:hover{
+    background: #55E68B;
+    box-shadow: 0 0 22px var(--accent-glow);
+  }
+  .btn-ghost{
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    border-radius: 8px;
+    transition: all .15s ease;
+  }
+  .btn-ghost:hover{
+    border-color: var(--text-dim);
+    color: var(--text);
+  }
+  ::-webkit-scrollbar{ height: 8px; width: 8px; }
+  ::-webkit-scrollbar-track{ background: transparent; }
+  ::-webkit-scrollbar-thumb{ background: var(--border); border-radius: 4px; }
+  .fade-in{ animation: fadeIn .35s ease both; }
+  @keyframes fadeIn{ from{ opacity:0; transform: translateY(6px);} to{ opacity:1; transform: translateY(0);} }
+  .divider-label{
+    display:flex; align-items:center; gap:10px;
+    color: var(--text-faint); font-size: 10.5px; letter-spacing:.1em; text-transform:uppercase;
+  }
+  .divider-label::before, .divider-label::after{
+    content:''; flex:1; height:1px; background: var(--border-soft);
+  }
+</style>
+</head>
+<body class="min-h-screen">
+
+<!-- HEADER -->
+<header class="border-b" style="border-color: var(--border-soft);">
+  <div class="max-w-6xl mx-auto px-6 py-5 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <div class="w-8 h-8 rounded-md flex items-center justify-center mono font-bold text-sm" style="background: var(--accent-glow); color: var(--accent); border: 1px solid var(--accent-dim);">&gt;_</div>
+      <div>
+        <div class="mono font-bold text-[15px] tracking-tight">deploy-gen</div>
+        <div class="text-[11px] mono" style="color: var(--text-faint);">cloudflared + systemd config generator</div>
+      </div>
+    </div>
+    <div class="hidden sm:flex items-center gap-2 mono text-[11px]" style="color: var(--text-faint);">
+      <span class="status-dot" id="header-dot"></span>
+      <span id="header-status">awaiting input</span>
+    </div>
+  </div>
+</header>
+
+<main class="max-w-6xl mx-auto px-6 py-10">
+
+  <!-- INTRO -->
+  <div class="mb-10 max-w-2xl">
+    <h1 class="text-2xl font-bold tracking-tight mb-2">Buat konfigurasi deploy tanpa ganti placeholder manual</h1>
+    <p class="text-sm" style="color: var(--text-dim);">Isi detail tunnel dan aplikasi sekali. Tool ini menyusun perintah Cloudflare Tunnel, file config, dan unit systemd yang siap ditempel ke server.</p>
+  </div>
+
+  <div class="grid lg:grid-cols-5 gap-8">
+
+    <!-- FORM COLUMN -->
+    <div class="lg:col-span-2 space-y-6">
+
+      <!-- Tunnel Card -->
+      <div class="card p-5">
+        <div class="flex items-center gap-2 mb-4">
+          <span class="section-eyebrow">01 · Cloudflare Tunnel</span>
+        </div>
+        <div class="space-y-4">
+          <div>
+            <label class="field-label" for="tunnelName">Nama Tunnel</label>
+            <input id="tunnelName" class="field-input mono" placeholder="ratekit" data-required>
+            <div class="field-hint">Identifier tunnel di Cloudflare</div>
+          </div>
+          <div>
+            <label class="field-label" for="appName">Nama Aplikasi</label>
+            <input id="appName" class="field-input mono" placeholder="ratekit-api" data-required>
+            <div class="field-hint">Dipakai untuk nama file config &amp; service</div>
+          </div>
+          <div>
+            <label class="field-label" for="subdomain">Subdomain</label>
+            <input id="subdomain" class="field-input mono" placeholder="ratekit.aigoretech.biz.id" data-required>
+          </div>
+          <div>
+            <label class="field-label" for="credPath">Credential JSON Path</label>
+            <input id="credPath" class="field-input mono" placeholder="/var/lib/cloudflared/ratekit.json" data-required>
+          </div>
+        </div>
+      </div>
+
+      <!-- Server / App Card -->
+      <div class="card p-5">
+        <div class="flex items-center gap-2 mb-4">
+          <span class="section-eyebrow">02 · Server &amp; Aplikasi</span>
+        </div>
+        <div class="space-y-4">
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="field-label" for="serverUser">User Server</label>
+              <input id="serverUser" class="field-input mono" placeholder="pi" data-required>
+            </div>
+            <div>
+              <label class="field-label" for="appPort">Port Aplikasi</label>
+              <input id="appPort" class="field-input mono" placeholder="8000" data-required>
+            </div>
+          </div>
+          <div>
+            <label class="field-label" for="projectPath">Path Project</label>
+            <input id="projectPath" class="field-input mono" placeholder="/home/pi/project/RateKit" data-required>
+          </div>
+          <div>
+            <label class="field-label" for="venvName">Nama Virtual Environment</label>
+            <input id="venvName" class="field-input mono" placeholder="myenv" data-required>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="field-label" for="gunicornModule">Module Gunicorn</label>
+              <input id="gunicornModule" class="field-input mono" placeholder="main:app" value="main:app">
+            </div>
+            <div>
+              <label class="field-label" for="workerCount">Worker Gunicorn</label>
+              <input id="workerCount" class="field-input mono" placeholder="4" value="4">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="validationWarning" class="hidden card p-4 border" style="border-color:#5a2d2f; background: rgba(229,72,77,0.06);">
+        <p class="text-[12.5px]" style="color:#F58F91;">Lengkapi field yang masih kosong sebelum generate. Field yang bermasalah ditandai merah.</p>
+      </div>
+
+      <button id="generateBtn" class="btn-primary w-full py-3 text-sm">Generate Configuration</button>
+    </div>
+
+    <!-- OUTPUT COLUMN -->
+    <div class="lg:col-span-3">
+
+      <div id="emptyState" class="card p-10 text-center h-full flex flex-col items-center justify-center gap-3" style="min-height: 420px;">
+        <div class="mono text-3xl" style="color: var(--text-faint);">&gt;_</div>
+        <p class="text-sm" style="color: var(--text-dim);">Output konfigurasi akan muncul di sini</p>
+        <p class="text-[12px]" style="color: var(--text-faint);">Isi form di sebelah kiri lalu tekan Generate Configuration</p>
+      </div>
+
+      <div id="outputArea" class="hidden space-y-5">
+
+        <div class="flex items-center justify-between mb-1">
+          <div class="divider-label flex-1 mono">deploy sequence — 5 steps</div>
+        </div>
+
+        <div class="flex gap-3">
+          <button id="copyAllBtn" class="copy-btn flex-1 py-2">Copy All</button>
+          <button id="downloadBtn" class="copy-btn flex-1 py-2">Download .txt</button>
+        </div>
+
+        <div id="cardsContainer" class="space-y-5"></div>
+
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer class="max-w-6xl mx-auto px-6 py-8 mt-6 border-t" style="border-color: var(--border-soft);">
+  <p class="text-[11px] mono" style="color: var(--text-faint);">deploy-gen · runs entirely in your browser · no data leaves this page</p>
+</footer>
+
+<script>
+const fields = ['tunnelName','appName','subdomain','credPath','serverUser','appPort','projectPath','venvName','gunicornModule','workerCount'];
+const ids = {};
+fields.forEach(id => ids[id] = document.getElementById(id));
+
+const headerDot = document.getElementById('header-dot');
+const headerStatus = document.getElementById('header-status');
+
+function checkFilledCount(){
+  const required = ['tunnelName','appName','subdomain','credPath','serverUser','appPort','projectPath','venvName'];
+  const filled = required.filter(id => ids[id].value.trim().length > 0).length;
+  if(filled === 0){
+    headerDot.className = 'status-dot';
+    headerStatus.textContent = 'awaiting input';
+  } else if(filled < required.length){
+    headerDot.className = 'status-dot warn';
+    headerStatus.textContent = filled + '/' + required.length + ' fields set';
+  } else {
+    headerDot.className = 'status-dot active';
+    headerStatus.textContent = 'ready to generate';
+  }
+}
+fields.forEach(id => ids[id].addEventListener('input', () => { checkFilledCount(); ids[id].classList.remove('invalid'); }));
+checkFilledCount();
+
+function esc(str){
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// simple tokenizer highlight for shell/yaml/ini-like text
+function highlight(text){
+  return esc(text)
+    .replace(/^(sudo|cloudflared|journalctl)\b/gm, '<span class="tok-cmd">$1</span>')
+    .replace(/^(\[.*\])$/gm, '<span class="tok-key">$1</span>')
+    .replace(/^(\s*)([A-Za-z_]+)(=)/gm, '$1<span class="tok-key">$2</span>$3')
+    .replace(/^(\s*)(tunnel|credentials-file|hostname|service|ingress):/gm, '$1<span class="tok-key">$2</span>:')
+    .replace(/(#.*)$/gm, '<span class="tok-comment">$1</span>');
+}
+
+function buildConfig(){
+  const v = {};
+  fields.forEach(id => v[id] = ids[id].value.trim());
+  v.gunicornModule = v.gunicornModule || 'main:app';
+  v.workerCount = v.workerCount || '4';
+
+  const tunnel = v.tunnelName, app = v.appName, sub = v.subdomain, cred = v.credPath;
+  const user = v.serverUser, port = v.appPort, project = v.projectPath, venv = v.venvName;
+  const module = v.gunicornModule, workers = v.workerCount;
+
+  const sections = [];
+
+  sections.push({
+    title: '1. Cloudflare Tunnel Setup',
+    desc: 'Buat tunnel dan arahkan DNS ke subdomain',
+    content: `cloudflared tunnel create ${tunnel}
+
+cloudflared tunnel route dns ${tunnel} ${sub}`
+  });
+
+  sections.push({
+    title: '2. Cloudflared Config File',
+    desc: `sudo vim /home/${user}/.cloudflared/${app}.yml`,
+    content: `tunnel: ${tunnel}
+credentials-file: ${cred}
+
+ingress:
+  - hostname: ${sub}
+    service: http://localhost:${port}
+
+  - service: http_status:404`
+  });
+
+  sections.push({
+    title: '3. Cloudflared Systemd Service',
+    desc: `sudo vim /etc/systemd/system/cloudflared-${app}.service`,
+    content: `[Unit]
+Description=Cloudflare Tunnel: ${tunnel}
+After=network.target
+
+[Service]
+Type=simple
+User=${user}
+ExecStart=/usr/bin/cloudflared tunnel --config /home/${user}/.cloudflared/${app}.yml run
+Restart=on-failure
+RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target`
+  });
+
+  sections.push({
+    title: '4. Application Systemd Service',
+    desc: `sudo vim /etc/systemd/system/${app}.service`,
+    content: `[Unit]
+Description=${app}
+After=network.target
+
+[Service]
+User=${user}
+Group=${user}
+WorkingDirectory=${project}
+Environment="PATH=${project}/${venv}/bin"
+ExecStart=${project}/${venv}/bin/gunicorn ${module} -w ${workers} -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:${port}
+Restart=always
+RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target`
+  });
+
+  sections.push({
+    title: '5. Systemd Commands',
+    desc: 'Reload, enable, start, dan cek log',
+    content: `sudo systemctl daemon-reload
+
+sudo systemctl enable cloudflared-${app}
+sudo systemctl enable ${app}
+
+sudo systemctl start cloudflared-${app}
+sudo systemctl start ${app}
+
+journalctl -u cloudflared-${app} -f
+sudo journalctl -u ${app}.service -f`
+  });
+
+  return sections;
+}
+
+function renderCards(sections){
+  const container = document.getElementById('cardsContainer');
+  container.innerHTML = '';
+  sections.forEach((s, i) => {
+    const card = document.createElement('div');
+    card.className = 'term-window fade-in';
+    card.style.animationDelay = (i * 0.05) + 's';
+    card.innerHTML = `
+      <div class="term-bar">
+        <span class="term-dot" style="background:#5A2D2F;"></span>
+        <span class="term-dot" style="background:#5A4A22;"></span>
+        <span class="term-dot" style="background:#1F5A3B;"></span>
+        <div class="ml-2 flex-1">
+          <div class="mono text-[12px] font-semibold">${esc(s.title)}</div>
+          <div class="mono text-[10.5px]" style="color: var(--text-faint);">${esc(s.desc)}</div>
+        </div>
+        <button class="copy-btn card-copy-btn" data-index="${i}">Copy</button>
+      </div>
+      <pre class="code-block"><code>${highlight(s.content)}</code></pre>
+    `;
+    container.appendChild(card);
+  });
+
+  container.querySelectorAll('.card-copy-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const idx = parseInt(btn.dataset.index);
+      navigator.clipboard.writeText(sections[idx].content).then(() => {
+        btn.textContent = 'Copied';
+        btn.classList.add('copied');
+        setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 1500);
+      });
+    });
+  });
+}
+
+function validate(){
+  const required = ['tunnelName','appName','subdomain','credPath','serverUser','appPort','projectPath','venvName'];
+  let ok = true;
+  required.forEach(id => {
+    if(ids[id].value.trim() === ''){
+      ids[id].classList.add('invalid');
+      ok = false;
+    } else {
+      ids[id].classList.remove('invalid');
+    }
+  });
+  return ok;
+}
+
+let lastSections = null;
+
+document.getElementById('generateBtn').addEventListener('click', () => {
+  const warning = document.getElementById('validationWarning');
+  if(!validate()){
+    warning.classList.remove('hidden');
+    return;
+  }
+  warning.classList.add('hidden');
+
+  const sections = buildConfig();
+  lastSections = sections;
+  renderCards(sections);
+
+  document.getElementById('emptyState').classList.add('hidden');
+  document.getElementById('outputArea').classList.remove('hidden');
+});
+
+document.getElementById('copyAllBtn').addEventListener('click', () => {
+  if(!lastSections) return;
+  const all = lastSections.map(s => `# ${s.title}\n# ${s.desc}\n\n${s.content}`).join('\n\n\n');
+  navigator.clipboard.writeText(all).then(() => {
+    const btn = document.getElementById('copyAllBtn');
+    btn.textContent = 'Copied all';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'Copy All'; btn.classList.remove('copied'); }, 1500);
+  });
+});
+
+document.getElementById('downloadBtn').addEventListener('click', () => {
+  if(!lastSections) return;
+  const appName = ids.appName.value.trim() || 'deploy';
+  const all = lastSections.map(s => `# ${s.title}\n# ${s.desc}\n\n${s.content}`).join('\n\n\n');
+  const blob = new Blob([all], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${appName}-deploy-config.txt`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+});
+</script>
+
+</body>
+</html>
