@@ -18,3 +18,21 @@ network={
 }
 
 ```
+
+## Install Cloudflared
+
+```bash
+chmod +x cloudflared-linux-arm
+```
+
+```bash
+chmod +x cloudflared-linux-arm
+```
+
+```bash
+sudo mv cloudflared-linux-arm /usr/local/bin/cloudflared
+```
+
+```bash
+cloudflared --version
+```
