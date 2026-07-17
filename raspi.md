@@ -36,3 +36,13 @@ sudo mv cloudflared-linux-arm /usr/local/bin/cloudflared
 ```bash
 cloudflared --version
 ```
+
+# Login Github
+
+```bash
+ssh-keygen -t ed25519 -C "email-github-lu"
+```
+
+```bash
+cat ~/.ssh/id_ed25519.pub
+```
