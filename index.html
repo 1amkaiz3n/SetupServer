@@ -493,7 +493,7 @@ cloudflared tunnel route dns ${tunnel} ${sub}`
   sections.push({
     title: '2. Cloudflared Config File',
     tabLabel: 'Cloudflared Config',
-    desc: `sudo vim /home/${user}/.cloudflared/${app}.yml`,
+    desc: 'sudo vim ~/.cloudflared/config.yml',
     isCommand: true,
     content: `tunnel: ${tunnel}
 credentials-file: ${cred}
@@ -517,7 +517,7 @@ After=network.target
 [Service]
 Type=simple
 User=${user}
-ExecStart=/usr/bin/cloudflared tunnel --config /home/${user}/.cloudflared/${app}.yml run
+ExecStart=/usr/bin/cloudflared tunnel --config ~/.cloudflared/config.yml run
 Restart=on-failure
 RestartSec=5s
 
@@ -555,13 +555,14 @@ WantedBy=multi-user.target`
     group: 'Cloudflare Tunnel & Systemd',
     content: `sudo systemctl daemon-reload
 
-sudo systemctl enable cloudflared-${app}
-sudo systemctl enable ${app}
-
+# Cloudflare
 sudo systemctl start cloudflared-${app}
-sudo systemctl start ${app}
+sudo systemctl enable cloudflared-${app}
+sudo journalctl -u cloudflared-${app} -f
 
-journalctl -u cloudflared-${app} -f
+# Aplikasi
+sudo systemctl enable ${app}
+sudo systemctl start ${app}
 sudo journalctl -u ${app}.service -f`
   });
 
